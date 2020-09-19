@@ -3,11 +3,14 @@ package arenainsight
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	arena "github.com/mrgreenturtle/bnetconnect/arenaleaderboard"
 	bnet "github.com/mrgreenturtle/bnetconnect/blizzardclient"
 	cp "github.com/mrgreenturtle/bnetconnect/characterprofile"
 )
+
+var wg sync.WaitGroup
 
 func GetArenaEntries(b *bnet.BnetClient, seasonID int, bracket string) arena.ArenaLeaderBoard {
 
@@ -40,7 +43,7 @@ func GetTopNumberArenaSpec(b *bnet.BnetClient, seasonID int, bracket string, cla
 }
 
 func helperChannel(b *bnet.BnetClient, seasonID int, bracket string, class string, spec string, amount int, c chan []cp.CharacterProfile) {
-
+	defer wg.Done()
 	topProfile := []cp.CharacterProfile{}
 	tempAlb := GetArenaEntries(b, seasonID, bracket)
 	tempAlb.Entries = tempAlb.Entries[0:1000]
@@ -59,6 +62,7 @@ func helperChannel(b *bnet.BnetClient, seasonID int, bracket string, class strin
 }
 
 func GetAllNumberArenaCasters(b *bnet.BnetClient, seasonID int, bracket string, amount int) {
+	wg.Add(9)
 	chashadow := make(chan []cp.CharacterProfile)
 	chaarcane := make(chan []cp.CharacterProfile)
 	chafire := make(chan []cp.CharacterProfile)
@@ -73,30 +77,29 @@ func GetAllNumberArenaCasters(b *bnet.BnetClient, seasonID int, bracket string, 
 	go helperChannel(b, seasonID, bracket, "mage", "arcane", amount, chaarcane)
 	go helperChannel(b, seasonID, bracket, "mage", "fire", amount, chafire)
 	go helperChannel(b, seasonID, bracket, "mage", "frost", amount, chafrost)
-	go helperChannel(b, seasonID, bracket, "druid", "moonkin", amount, chamoonkin)
+	go helperChannel(b, seasonID, bracket, "druid", "balance", amount, chamoonkin)
 	go helperChannel(b, seasonID, bracket, "shaman", "elemental", amount, chaele)
 	go helperChannel(b, seasonID, bracket, "warlock", "affliction", amount, chaaff)
 	go helperChannel(b, seasonID, bracket, "warlock", "demonology", amount, chademo)
 	go helperChannel(b, seasonID, bracket, "warlock", "destruction", amount, chadestro)
-	select {
-	case shadow := <-chashadow:
-		fmt.Printf("%s", shadow[0].ActiveSpec.Name)
-	case arcane := <-chaarcane:
-		fmt.Printf("%s", arcane[0].ActiveSpec.Name)
-	case fire := <-chafire:
-		fmt.Printf("%s", fire[0].ActiveSpec.Name)
-	case frost := <-chafrost:
-		fmt.Printf("%s", frost[0].ActiveSpec.Name)
-	case moonkin := <-chamoonkin:
-		fmt.Printf("%s", moonkin[0].ActiveSpec.Name)
-	case ele := <-chaele:
-		fmt.Printf("%s", ele[0].ActiveSpec.Name)
-	case aff := <-chaaff:
-		fmt.Printf("%s", aff[0].ActiveSpec.Name)
-	case demo := <-chademo:
-		fmt.Printf("%s", demo[0].ActiveSpec.Name)
-	case destro := <-chadestro:
-		fmt.Printf("%s", destro[0].ActiveSpec.Name)
-	}
+	shadow := <-chashadow
+	arcane := <-chaarcane
+	fire := <-chafire
+	frost := <-chafrost
+	moonkin := <-chamoonkin
+	ele := <-chaele
+	aff := <-chaaff
+	demo := <-chademo
+	destro := <-chadestro
+	wg.Wait()
+	fmt.Printf("%s \t %s\n", shadow[0].ActiveSpec.Name, shadow[0].Name)
+	fmt.Printf("%s \t %s\n", arcane[0].ActiveSpec.Name, arcane[0].Name)
+	fmt.Printf("%s \t %s\n", fire[0].ActiveSpec.Name, fire[0].Name)
+	fmt.Printf("%s \t %s\n", frost[0].ActiveSpec.Name, frost[0].Name)
+	fmt.Printf("%s \t %s\n", moonkin[0].ActiveSpec.Name, moonkin[0].Name)
+	fmt.Printf("%s \t %s\n", ele[0].ActiveSpec.Name, ele[0].Name)
+	fmt.Printf("%s \t %s\n", aff[0].ActiveSpec.Name, aff[0].Name)
+	fmt.Printf("%s \t %s\n", demo[0].ActiveSpec.Name, demo[0].Name)
+	fmt.Printf("%s \t %s\n", destro[0].ActiveSpec.Name, destro[0].Name)
 
 }
